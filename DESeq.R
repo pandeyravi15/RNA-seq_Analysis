@@ -1,25 +1,22 @@
-## function for DESeq analysis
-DEG <- function(countdata,
-                meta,
-                include.batch = FALSE,
-                ref = ref) {
+# LOAD clean and formatted RNA-seq count data
+load("data/ProcessedData_Brain_Transcriptomics.RData")
+
+
+
+#To assess the differentially expressed transcripts. We'll use the `DESeq2` package to perform differential expression analysis of the RNA-seq data.
+
+## custom function for DESeq analysis
+DEG.SampleType <- function(rawdata,meta) {
   dseq_res <- data.frame()
   All_res <- data.frame()
   
-  if (include.batch) {
-    cat("Including batch as covariate\n")
-    design_formula <- ~ Batch + SampleType
-  }
-  else{
-    design_formula <- ~ SampleType
-  }
+  dat2 <- as.matrix(rawdata[, rownames(meta)])
   
-  dat2 <- as.matrix(rawdata[, colnames(rawdata) %in% rownames(meta)])
   ddsHTSeq <- DESeqDataSetFromMatrix(countData = dat2,
                                      colData = meta,
-                                     design = ~ design_formula)
+                                     design = ~SampleType)
   ddsHTSeq <- ddsHTSeq[rowSums(counts(ddsHTSeq)) >= 6,]
-  ddsHTSeq$SampleType <- relevel(ddsHTSeq$SampleType, ref = ref)
+
   dds <- DESeq(ddsHTSeq, parallel = TRUE)
   res <- results(dds, alpha = 0.05)
   summary(res)
@@ -30,10 +27,13 @@ DEG <- function(countdata,
   
 }
 
+## add group column to metadata
+metadata <- metadata %>% 
+  mutate(Group = paste0(.$Genotype,"-",.$Sex,"-",.$Age,"M")) %>%
+  mutate(Genotype = factor(Genotype, levels = c('WT','5XFAD')))
 
-comparisons <-  data.frame(control=c("C57BL/6J-Female-4M" ,  "C57BL/6J-Male-4M" , "C57BL/6J-Female-12M"  ,  "C57BL/6J-Male-12M"),
-                           case=c("B6J.LOAD3-Female-4M", "B6J.LOAD3-Male-4M",   "B6J.LOAD3-Female-12M", "B6J.LOAD3-Male-12M" ))
-# # genotype + diet
+comparisons <-  data.frame(control=c("WT-F-4M" ,  "WT-M-4M" , "WT-F-6M" ,  "WT-M-6M" , "WT-F-12M"  ,  "WT-M-12M"),
+                           case=c("5XFAD-F-4M" ,  "5XFAD-M-4M" , "5XFAD-F-6M" ,  "5XFAD-M-6M" , "5XFAD-F-12M"  ,  "5XFAD-M-12M"))
 DE_Genotype.list <- list()
 DE_Genotype.df <- data.frame()
 #
@@ -49,8 +49,6 @@ for (i in 1:nrow(comparisons)){
   DE_Genotype.list[[i]] <- All_res
   names(DE_Genotype.list)[i] <- paste0(model=gsub("-.*$","",comparisons[i,2])[1],"-", "B6","(",sex=unique(meta$Sex),"-",Age=sapply(strsplit(comparisons[i,2], "-"), "[", 3),")")
 }
-
-#save(DE_Genotype.list,DE_Genotype.df,file="~/results/DESeq_Results_Transcripotmics.RData")
 
 
 ## Summary table of differential analysis results
@@ -68,7 +66,18 @@ deg1 %>% gt() %>%
 
 
 ## Volcano Plots
-EnhancedVolcano(DE_Genotype.list$`B6J.LOAD3-B6(Female-4M)`,
-                lab = (DE_Genotype.list$`B6J.LOAD3-B6(Female-4M)`$symbol),x = 'log2FoldChange', y = 'padj',legendPosition = 'none',
-                title = '4 month Female:LOAD3 vs B6',subtitle = '',
-                FCcutoff = 0.0,pCutoff = 0.05,xlim = c(-3, 3))
+
+for (i in 1:length(DE_Genotype.list))
+{
+  dat <- DE_Genotype.list[[i]]
+  
+  print(
+    EnhancedVolcano(dat,
+                    lab = (dat$symbol),x = 'log2FoldChange', y = 'padj',legendPosition = 'none',
+                    title = names(DE_Genotype.list)[i],subtitle = '',
+                    FCcutoff = 0.0,pCutoff = 0.05,xlim = c(-5, 5))
+  )
+}
+
+#save(DE_Genotype.list,DE_Genotype.df,file="~/results/DESeq_Results_Transcripotmics.RData")
+

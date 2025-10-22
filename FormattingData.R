@@ -59,18 +59,12 @@ ggplot(tg.counts, aes(x=Genotype, y=counts, color=Age, shape = Sex)) +
 counts <- gene_counts %>% column_to_rownames("gene_id") 
 
 #merge mouse and human APOE gene raw count
-counts[rownames(counts) %in% "ENSMUSG00000022892",] <- 
-  counts[rownames(counts) %in% "ENSMUSG00000022892",] + 
-  counts[rownames(counts) %in% "ENSG00000142192",]
-
-counts <- counts[!rownames(counts) %in% c("ENSG00000142192"),]
+counts[rownames(counts) %in% "ENSMUSG00000022892",] <-  counts[rownames(counts) %in% "ENSMUSG00000022892",] + counts[rownames(counts) %in% "ENSG00000142192",]
 
 #merge mouse and human PS1 gene raw count
-counts[rownames(counts) %in% "ENSMUSG00000019969",] <- 
-  counts[rownames(counts) %in% "ENSMUSG00000019969",] + 
-  counts[rownames(counts) %in% "ENSG00000080815",]
+counts[rownames(counts) %in% "ENSMUSG00000019969",] <- counts[rownames(counts) %in% "ENSMUSG00000019969",] + counts[rownames(counts) %in% "ENSG00000080815",]
 
-counts <- counts[!rownames(counts) %in% c("ENSG00000080815"),]
+counts <- counts[!rownames(counts) %in% c("ENSG00000080815","ENSG00000142192"),]
 
 # We can confirm that the human genes are now absent from the counts table:
 counts[,1:6] %>% filter(!str_detect(rownames(.), "MUS"))
@@ -138,6 +132,11 @@ tpm <- tpm[!rownames(tpm) %in% c("ENSG00000080815","ENSG00000142192"),]
 # We can confirm that the human genes are now absent from the counts table:
 tpm[,1:6] %>% filter(!str_detect(rownames(.), "MUS"))
 
+#Here we perform a minimal pre-filtering to keep only rows that have at least 0.1  in gene_tpm count data in at least 6 separate samples.
+TPMcount.filter <- tpm[rowSums((tpm > 0.1))>5, ]
+rawdata1 <- TPMcount.filter[,colnames(TPMcount.filter) %in% meta$Names]
+mydat_TPM <- as.data.frame(log2(rawdata1 + 1))
+
 
 
 # We will also validate sex of samples. Let's plot the counts for female specific `Xist` and male-specific `Ddx3y` genes across the samples:
@@ -169,15 +168,10 @@ ggplot(tg.counts, aes(x=Sex, y=tpm, color=Age, shape = Genotype)) +
 
 
 # Now, we have formatted the count and metadata for downstream analyses. We will save the data
-
-
-#Here we perform a minimal pre-filtering to keep only rows that have at least 0.1  in gene_tpm count data in at least 6 separate samples.
-TPMcount.filter <- tpm[rowSums((tpm > 0.1))>5, ]
-rawdata1 <- TPMcount.filter[,colnames(TPMcount.filter) %in% meta$Names]
-mydat_TPM <- as.data.frame(log2(rawdata1 + 1))
-
-## save data
 metadata <- as.data.frame(meta)
 rownames(metadata) <- metadata$Names
 
 #save(metadata,rawcountdata,mydat_TPM,file="data/ProcessedData_Brain_Transcriptomics.RData")
+
+
+
