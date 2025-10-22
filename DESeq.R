@@ -1,11 +1,6 @@
-# LOAD clean and formatted RNA-seq count data
-load("data/ProcessedData_Brain_Transcriptomics.RData")
 
-
-
-#To assess the differentially expressed transcripts. We'll use the `DESeq2` package to perform differential expression analysis of the RNA-seq data.
-
-## custom function for DESeq analysis
+# To assess the differentially expressed transcripts. We'll use the `DESeq2` package to perform differential expression analysis of the RNA-seq data.
+# custom function for DESeq analysis
 DEG.SampleType <- function(rawdata,meta) {
   dseq_res <- data.frame()
   All_res <- data.frame()
@@ -15,28 +10,40 @@ DEG.SampleType <- function(rawdata,meta) {
   ddsHTSeq <- DESeqDataSetFromMatrix(countData = dat2,
                                      colData = meta,
                                      design = ~SampleType)
-  ddsHTSeq <- ddsHTSeq[rowSums(counts(ddsHTSeq)) >= 6,]
-
+  
+  # Here we perform a minimal pre-filtering to keep only rows that have at least 10 reads in at least 6 separate samples.
+  ddsHTSeq <-ddsHTSeq[rowSums(counts(ddsHTSeq) >= 10) >= 6,]
+  
+  # run the differential expression analysis
   dds <- DESeq(ddsHTSeq, parallel = TRUE)
   res <- results(dds, alpha = 0.05)
   summary(res)
+  
+  # add gene symbol and ENTREZID to result table
   res$symbol <- map_function.df(res, "ENSEMBL", "SYMBOL")
   res$EntrezGene <- map_function.df(res, "ENSEMBL", "ENTREZID")
   
+  # re-arrange resuls table
   All_res <<- as.data.frame(res[, c(7:8, 1:6)])
   
 }
 
-## add group column to metadata
+# LOAD clean and formatted RNA-seq count data from previous step
+load("data/ProcessedData_Brain_Transcriptomics.RData")
+
+# add group column to metadata
 metadata <- metadata %>% 
   mutate(Group = paste0(.$Genotype,"-",.$Sex,"-",.$Age,"M")) %>%
   mutate(Genotype = factor(Genotype, levels = c('WT','5XFAD')))
 
+# set up the comparison table to perform DEA
 comparisons <-  data.frame(control=c("WT-F-4M" ,  "WT-M-4M" , "WT-F-6M" ,  "WT-M-6M" , "WT-F-12M"  ,  "WT-M-12M"),
                            case=c("5XFAD-F-4M" ,  "5XFAD-M-4M" , "5XFAD-F-6M" ,  "5XFAD-M-6M" , "5XFAD-F-12M"  ,  "5XFAD-M-12M"))
+
+# initiate an empty data frame and list to store results from DEA for each comaprion
 DE_Genotype.list <- list()
 DE_Genotype.df <- data.frame()
-#
+
 for (i in 1:nrow(comparisons)){
   meta <- metadata[metadata$Group %in% comparisons[i,] ,] %>% rename("SampleType" = "Genotype")
   DEG.SampleType(rawcountdata,meta)
@@ -65,8 +72,7 @@ deg1 %>% gt() %>%
   tab_header(title = md("total number of differentially expressed genes at `adjP<0.05`"))
 
 
-## Volcano Plots
-
+## Volcano Plots for differentially expressed genes
 for (i in 1:length(DE_Genotype.list))
 {
   dat <- DE_Genotype.list[[i]]
