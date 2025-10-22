@@ -93,3 +93,114 @@ dat <- DE_Genotype.df
 DEG.genes <- subset(dat[order(dat$padj),],padj<0.05)
 gp1 <- unique((DEG.genes$group))
 kegg.fn(gp1,DEG.genes,n=15)
+
+## GSEA Analysis
+dat <- DE_Genotype.df %>% select(EntrezGene, log2FoldChange, group) %>% na.omit()
+
+genot3 <- unique(dat$group)
+pathways2 <- data.frame()
+for (i in 1:length(genot3))
+{
+  df <- dat %>% filter(group %in% genot3[i]) %>% distinct(.,EntrezGene,.keep_all = TRUE)
+  geneList <- df %>% pull(log2FoldChange)
+  names(geneList) <- df %>% pull(EntrezGene)
+  kegg_gene_list <- sort(geneList, decreasing = TRUE)
+  kk2 <- KEGG.GSEA(kegg_gene_list)
+  kk3 <- cbind(as.data.frame(kk2), Genotype = genot3[i])
+  pathways2 <- rbind(pathways2, kk3)
+}
+
+GSEA.PS <- pathways2
+GSEA.PS$Description <-
+  gsub(" - Mus musculus \\(house mouse)", "", GSEA.PS$Description)
+GSEA.PS$Genotype <- factor(GSEA.PS$Genotype, levels = genot3)
+
+# save results
+#save(GSEA.PS,file="../results/GSEA_LOAD3_Brain_Transcriptomics.RData")
+
+# load("../results/GSEA_LOAD3_Brain_Transcriptomics.RData")
+mat1 <-
+  GSEA.PS[(GSEA.PS$Description %in% selected.path), ] %>% dplyr::select(Genotype, Description, NES) %>%
+  pivot_wider(id_cols = "Description",
+              names_from = "Genotype",
+              values_from = "NES") %>% column_to_rownames(var = "Description")  %>% as.data.frame(.) %>% na.omit()
+
+mat2 <-
+  GSEA.PS[(GSEA.PS$Description %in% selected.path), ] %>% dplyr::select(Genotype, Description, p.adjust) %>%
+  pivot_wider(id_cols = "Description",
+              names_from = "Genotype",
+              values_from = "p.adjust") %>% column_to_rownames(var = "Description")  %>% as.data.frame(.) %>% na.omit()
+
+mat3 <-
+  GSEA.PS[(GSEA.PS$Description %in% selected.path), ] %>% dplyr::select(Genotype, Description, pvalue) %>%
+  pivot_wider(id_cols = "Description",
+              names_from = "Genotype",
+              values_from = "pvalue") %>% column_to_rownames(var = "Description")  %>% as.data.frame(.) %>% na.omit()
+
+## check term names ar ein order in both matrix or not
+#match(rownames(mat1),rownames(mat2))
+#all(rownames(mat1) == rownames(mat2))
+#all(rownames(mat1) == rownames(mat3))
+
+col_fun = colorRamp2(c(-2, 0, 2), c("red", "white", "blue"))
+Heatmap(
+  as.matrix((mat1)),
+  name = "NES",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  row_names_side = "left",
+  show_row_names = TRUE,
+  row_names_max_width = unit(11, "cm"),
+  show_row_dend = FALSE,
+  show_column_dend = FALSE,
+  column_names_gp = gpar(fontsize = 18, fontface = "italic"),
+  row_names_gp = gpar(fontsize = 14),
+  column_names_rot = 60,
+  column_names_max_height = unit(12, "cm"),
+  col = col_fun,
+  heatmap_legend_param = list(
+    legend_height = unit(6, "cm"),
+    grid_width = unit(1, "cm"),
+    title_gp = gpar(fontsize = 16),
+    labels_gp = gpar(fontsize = 16)
+  ),
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    if(mat2[i, j] < 0.1 & mat2[i, j] > 0.05) {
+      grid.text("*", x, y)
+    } else if(mat2[i, j] < 0.05) {
+      grid.text("**", x, y)
+    }
+    
+  }
+)
+
+Heatmap(
+  as.matrix((mat1)),
+  name = "NES",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  row_names_side = "left",
+  show_row_names = TRUE,
+  row_names_max_width = unit(11, "cm"),
+  show_row_dend = FALSE,
+  show_column_dend = FALSE,
+  column_names_gp = gpar(fontsize = 18, fontface = "italic"),
+  row_names_gp = gpar(fontsize = 14),
+  column_names_rot = 60,
+  column_names_max_height = unit(12, "cm"),
+  col = col_fun,
+  heatmap_legend_param = list(
+    legend_height = unit(6, "cm"),
+    grid_width = unit(1, "cm"),
+    title_gp = gpar(fontsize = 16),
+    labels_gp = gpar(fontsize = 16)
+  ),
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    if(mat3[i, j] < 0.1 & mat2[i, j] > 0.05) {
+      grid.text("*", x, y)
+    } else if(mat3[i, j] < 0.05) {
+      grid.text("**", x, y)
+    }
+    
+  }
+)

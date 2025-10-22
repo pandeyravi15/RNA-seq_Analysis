@@ -1,3 +1,4 @@
+## LOAD required libraries
 needed.packages <- c("ComplexHeatmap","AnnotationDbi","circlize","corrplot","cowplot","clusterProfiler",
                      "dplyr", "DESeq2", "DOSE","data.table","EnhancedVolcano","enrichplot","forcats","ggplot2",  "gridExtra", "ggpubr", "ggnewscale","ggplotify","ggrepel", "Hmisc","janitor","lubridate","limma","purrr","PCAtools", "org.Mm.eg.db","org.Hs.eg.db","jtools",
                      "ReactomePA","RColorBrewer","stringr","scales","sva","tidyr","tibble","UpSetR","VennDiagram","gt","DEGreport","gprofiler2","readxl","readr")
@@ -24,6 +25,7 @@ expression_plot_log <- function(df,Name,binwidth){
   p
 }
 
+## Function for PCA plot
 plotPCA.df <-
   function (object,
             metadata = metadata,
