@@ -13,9 +13,6 @@ gene_counts[,1:3] %>%
   filter(!str_detect(gene_id, "MUS"))
 
 #### Accounting for transgenes
-#The LOAD3 model has two copies each of the APOE and MAPT genes - one endogenous mouse gene, and the orthologous human transgene. The RNA-seq data was assessed using a custom transcriptome definition that included the sequences of both the mouse and human versions of each gene.  
-#Ultimately we are going to sum the counts from both orthologous genes (human APOE and mouse Apoe; human MAPT and mouse Mapt). But first, let's look at the expression of each of these genes in the different groups. To start we'll filter the counts down to just those four relevant gene IDs and join the counts up with the covariates to explore the expression of these genes.  
-
 tg.counts <- gene_counts %>%
   filter(gene_id %in% c("ENSG00000080815","ENSMUSG00000019969",
                         "ENSG00000142192","ENSMUSG00000022892")) %>% 
