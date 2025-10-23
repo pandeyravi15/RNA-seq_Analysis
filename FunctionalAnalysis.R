@@ -26,19 +26,21 @@ for (i in 1:length(gp1)) {
 }
   
 ## perform enrichment analysis for KEGG pathways
-enrich_pathway.up <- compareCluster(dat.up,
-                                    organism = "mmu",
-                                    fun = "enrichKEGG",
-                                    pvalueCutoff = 0.1,
-                                    pAdjustMethod = "BH"
+enrich_pathway.up <- compareCluster(
+  dat.up,
+  organism = "mmu",
+  fun = "enrichKEGG",
+  pvalueCutoff = 0.1,
+  pAdjustMethod = "BH"
 )
 
 
-enrich_pathway.down <- compareCluster(dat.down,
-                                      organism = "mmu",
-                                      fun = "enrichKEGG",
-                                      pvalueCutoff = 0.1,
-                                      pAdjustMethod = "BH"
+enrich_pathway.down <- compareCluster(
+  dat.down,
+  organism = "mmu",
+  fun = "enrichKEGG",
+  pvalueCutoff = 0.1,
+  pAdjustMethod = "BH"
 )
 
 
@@ -98,8 +100,8 @@ gsea_pathways <- gsea_pathways %>% mutate(Genotype = factor(Genotype, levels = g
 
 # Plot the results for selected pathways
 selected.path <- c("Osteoclast differentiation","Lysosome","Phagosome","ECM-receptor interaction","Neuroactive ligand-receptor interaction",
-                    "Fc gamma R-mediated phagocytosis","Axon guidance","Focal adhesion","Cholinergic synapse","GABAergic synapse",
-                    "Oxytocin signaling pathway","Wnt signaling pathway","Endocytosis","Alzheimer disease","Oxidative phosphorylation")
+                   "Fc gamma R-mediated phagocytosis","Axon guidance","Focal adhesion","Cholinergic synapse","GABAergic synapse",
+                   "Oxytocin signaling pathway","Wnt signaling pathway","Endocytosis","Alzheimer disease","Oxidative phosphorylation")
 
 mat1 <-
   gsea_pathways[(gsea_pathways$Description %in% selected.path), ] %>% dplyr::select(Genotype, Description, NES) %>%
