@@ -1,6 +1,14 @@
 ### KEGG Pathways Enrichment
-#Over-representation (or enrichment) analysis is a statistical method that determines whether genes from pre-defined sets (ex: those beloging to a specific GO term or KEGG pathway) are present more than would be expected (over-represented) in a subset of your data. In this case, the subset is your set of significantly under or over expressed genes identified in DESeq2 analysis. 
-#We look for enrichment of biological pathways in a list of differentially expressed genes. Here we test for enrichment of KEGG pathways using using enrichKEGG function in [clusterProfiler](https://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html) package and plotted enriched terms. 
+#Over-representation (or enrichment) analysis is a statistical method that
+#determines whether genes from pre-defined sets (ex: those belonging to a
+#specific GO term or KEGG pathway) are present more than would be expected
+#(over-represented) in a subset of your data. In this case, the subset is\ set
+#of significantly under or over expressed genes identified in DESeq2 analysis.We
+#look for enrichment of biological pathways in a list of differentially
+#expressed genes. Here we test for enrichment of KEGG pathways using using
+#enrichKEGG function in
+##[clusterProfiler](https://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html)
+#package and plotted enriched terms.
 
 # LOAD the results from DESeq analysis
 lnames  = load("data/DESeq_Results_Transcripotmics.RData")
@@ -74,7 +82,10 @@ print(
 #Gene Set Enrichment Analysis (GSEA) is a computational method that determines
 #whether a pre-defined set of genes (ex: those belonging to a specific GO term or
 #KEGG pathway) shows statistically significant, concordant differences between
-#two biological states.
+#two biological states. 
+
+#Here, we ranked genes in each mouse models of interest according to logFC
+#values compared to respective controls and perform GSEA on them.
 
 dat <- DE_Genotype.df %>% select(EntrezGene, log2FoldChange, group) %>% na.omit()
 groups <- unique(dat$group)
