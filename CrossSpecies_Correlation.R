@@ -129,10 +129,8 @@ mod <- module_clusters$module
 
 save(ampad_modules_fc,module_clusters,mod, file= here::here("results","AMPAD_Module_Data.RData"))
 
-## Correlation between mouse models and human AD modules
-#There are two approaches that we commonly use to compute correlation between mouse data and human AD data:   
-  
-#  1. Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
+## There are two approaches that we commonly use to compute correlation between mouse data and human AD data:   
+# [1] Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
 #  + LogFC(h) = log fold change in expression of human AD patients compared to control patients. 
 #  + LogFC(m) = log fold change in expression of mouse AD models compared to control mouse models.
 
@@ -146,6 +144,7 @@ cor.test(LogFC(h), β)
   
 #Both approaches allow us to assess directional coherence between gene expression for genes in AMP-AD modules and the effects of genetic manipulations in mice. For this session we are going to use the first approach; we'll return to approach #2 later in the week.   
 
+# [1] Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
 
 #Read the results saved after differential expression analysis
 load("data/DESeq_Results_Transcripotmics.RData")
@@ -257,4 +256,160 @@ ggdraw(g)
 #Color intensity and size of the circles are proportional to the correlation
 #coefficient.  Black squares around dots represent significant correlation at
 #p-value=0.05 and non-significant correlations are left blank.
+
+#  2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  
+mydat <- as.data.frame(mydat_TPM) %>% mutate(Gene=mapIds(org.Mm.eg.db,keys = rownames(.),column = "SYMBOL",keytype = "ENSEMBL",multiVals = "first"),.before =1) %>%
+  pivot_longer(cols=-Gene,names_to="Names",values_to="value") %>% na.omit(.) %>%
+  mutate(Names = as.integer(Names))
+
+mydat_with_metadata <- mydat %>% left_join(metadata,by="Names") %>% 
+  dplyr::select(Gene,Names,Sex,Age,Genotype,Age,value) %>% 
+  mutate(Sex = factor(Sex,levels=c("F","M")))  %>% 
+  mutate(FAD = ifelse(Genotype %in% c("5XFAD"),1,0))  %>%
+  mutate(Age=factor(Age, levels = c(4,6,12)))
+
+
+lms.case <- mydat_with_metadata %>% split(.$Gene) %>% map(~lm(value ~ Sex + Age + FAD, data=.x)) %>% map(summary) 
+
+effects <- as.data.frame(bind_rows( lapply(lms.case, function(x) x$coefficients[,"Estimate"] ))) %>% mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names")
+pvals <- as.data.frame(bind_rows( lapply( lms.case, function(x) x$coefficients[,"Pr(>|t|)"] ))) %>% mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names")
+colnames(pvals) <- colnames(effects) <- c("(Intercept)", "Sex (Male)","Age_6M","Age_12M","5XFAD")
+
+rna_effects <- effects %>% tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% pivot_longer(cols=-Gene,names_to="Variant",values_to="value")
+rna_pvals <- pvals %>% tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% pivot_longer(cols=-Gene,names_to="Variant",values_to="pval")
+effects_pvals <- rna_effects %>% left_join(rna_pvals,by=c("Gene","Variant")) %>% mutate(padj = p.adjust(pval,method = "fdr"))
+
+
+ordered.variant <- c("Sex (Male)","Age_6M","Age_12M","5XFAD")
+data_for_plot <- corr_function_lm(rna_effects,ampad_modules_fc %>% rename("Gene"="symbol")) %>% 
+  mutate(Background = ifelse(Variant %in% c("Sex (Male)"),"Female",ifelse(Variant %in% c("5XFAD"),"B6","Age_4M"))) %>%
+  mutate(Background=factor(Background,levels = c("Female","Age_4M","B6")))
+range(data_for_plot$correlation)
+
+variant_corrplot_colored(data_for_plot,0.4)
+
+corr_function_lm <- function(data,human_data)
+{
+  ns_vs_ampad_fc <- data  %>%
+    inner_join(human_data, by = c("Gene")) %>%
+    group_by(module, Variant) %>%
+    nest(data = c(Gene, value, ampad_fc)) %>%
+    mutate(
+      cor_test = map(data, ~ cor.test(.x[["value"]], .x[["ampad_fc"]], method = "pearson")),
+      estimate = map_dbl(cor_test, "estimate"),
+      p_value = map_dbl(cor_test, "p.value")
+    ) %>%
+    ungroup() %>%
+    dplyr::select(-cor_test)
+  
+  
+  # Process data for plotting ----
+  # Flag for significant results, add cluster information to modules
+  nanostring <- ns_vs_ampad_fc %>%
+    mutate(significant = p_value < 0.05, age_group = "All Months") %>%
+    left_join(module_clusters, by = "module") %>%
+    dplyr::select(
+      cluster,
+      cluster_label,
+      module,
+      Variant,
+      age_group,
+      correlation = estimate,
+      p_value,
+      significant
+    )
+  
+  # Create a version of the data for plotting - clean up naming, order factors, etc
+  nanostring_for_plot.all <- nanostring %>%
+    arrange(cluster) %>%
+    mutate(
+      Variant = factor(Variant, levels = ordered.variant),
+      Variant = fct_rev(Variant),
+      module = factor(module, levels = mod),
+    )
+}
+
+variant_corrplot_colored <- function(data, ran) {
+  p2 <- ggplot2::ggplot() +
+    ggplot2::geom_tile(
+      data = data,
+      ggplot2::aes(x = .data$module, y = .data$Variant),
+      colour = "black",
+      fill = "white"
+    ) +
+    ggplot2::geom_point(
+      data = dplyr::filter(data),
+      ggplot2::aes(
+        x = .data$module,
+        y = .data$Variant,
+        colour = .data$correlation,
+        size = abs(.data$correlation)
+      )
+    ) +
+    ggplot2::geom_point(
+      data = dplyr::filter(data, .data$significant),
+      aes(
+        x = .data$module,
+        y = .data$Variant,
+        colour = .data$correlation
+      ),
+      color = "black",
+      shape = 0,
+      size = 9
+    ) +
+    ggplot2::scale_x_discrete(position = "top") +
+    ggplot2::scale_size(guide = "none", limits = c(0, ran)) +
+    ggplot2::scale_color_gradient2(
+      limits = c(-ran, ran),
+      breaks = c(-ran, 0, ran),
+      low = "#85070C",
+      high = "#164B6E",
+      name = "Correlation",
+      guide = ggplot2::guide_colorbar(ticks = FALSE)
+    ) +
+    ggplot2::labs(x = NULL, y = NULL) +
+    ggplot2::ggtitle("Perturbation| Control") +
+    ggplot2::facet_grid(
+      rows = dplyr::vars(.data$Background),
+      cols = dplyr::vars(.data$cluster_label),
+      scales = "free",
+      space = "free",
+      switch = "y"
+    ) +
+    ggplot2::theme(
+      strip.text.x = ggplot2::element_text(size = 11),
+      strip.text.y.left = ggplot2::element_text(angle = 0, size = 12),
+      strip.background.y = ggplot2::element_rect(fill = "grey95"),
+      axis.ticks = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        angle = 90,
+        hjust = 0,
+        size = 12
+      ),
+      axis.text.y = ggplot2::element_text(size = 12),
+      plot.title = ggplot2::element_text(
+        angle = 0,
+        vjust = -56,
+        hjust = 0.01,
+        size = 11,
+        face = "bold"
+      ),
+      panel.background = ggplot2::element_blank(),
+      plot.title.position = "plot",
+      panel.grid = ggplot2::element_blank(),
+      legend.position = "right"
+    ) + theme(legend.title = element_text(size=13),legend.text = element_text(size=12))
+  
+  fills <- c("darkorange3","chartreuse3","deepskyblue2","turquoise","deeppink2")
+  g <- ggplot_gtable(ggplot_build(p2))
+  stripr <- which(grepl('strip-t', g$layout$name))
+  k <- 1
+  for (i in stripr) {
+    j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+    g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+    k <- k+1
+  }
+  ggdraw(g)
+  
+}
 
