@@ -4,25 +4,27 @@
 
 # LOAD the results from DESeq analysis
 lnames  = load("data/DESeq_Results_Transcripotmics.RData")
+
+# sub-setting significantly differentially expressed genes
 DEG.genes <- subset(DE_Genotype.df[order(DE_Genotype.df$padj),],padj<0.05)
-gp1 <- unique((DEG.genes$group))
+groups <- unique((DEG.genes$group))
 
 # storing all up-regulated genes in a list for each comparison
 dat.up <- list()
-for (i in 1:length(gp1)) {
+for (i in 1:length(groups)) {
   dat.up[[i]] <-
-    DEG.genes[DEG.genes$group %in% gp1[i] &
+    DEG.genes[DEG.genes$group %in% groups[i] &
                 DEG.genes$log2FoldChange > 0,] %>% pull(EntrezGene)
-  names(dat.up)[i] <- gp1[i]
+  names(dat.up)[i] <- groups[i]
 }
  
 # storing all down-regulated genes in a list for each comparison
 dat.down <- list()
-for (i in 1:length(gp1)) {
+for (i in 1:length(groups)) {
   dat.down[[i]] <-
-    DEG.genes[DEG.genes$group %in% gp1[i] &
+    DEG.genes[DEG.genes$group %in% groups[i] &
                 DEG.genes$log2FoldChange < 0,] %>% pull(EntrezGene)
-  names(dat.down)[i] <- gp1[i]
+  names(dat.down)[i] <- groups[i]
 }
   
 ## perform enrichment analysis for KEGG pathways
@@ -68,6 +70,12 @@ print(
 )
 
 ## Gene Set Enrichment Analysis
+
+#Gene Set Enrichment Analysis (GSEA) is a computational method that determines
+#whether a pre-defined set of genes (ex: those belonging to a specific GO term or
+#KEGG pathway) shows statistically significant, concordant differences between
+#two biological states.
+
 dat <- DE_Genotype.df %>% select(EntrezGene, log2FoldChange, group) %>% na.omit()
 groups <- unique(dat$group)
 gsea_pathways <- data.frame()

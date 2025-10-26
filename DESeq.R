@@ -85,5 +85,6 @@ for (i in 1:length(DE_Genotype.list))
   )
 }
 
-#save(DE_Genotype.list,DE_Genotype.df,file="~/results/DESeq_Results_Transcripotmics.RData")
+# save results
+save(DE_Genotype.list,DE_Genotype.df,file="~/results/DESeq_Results_Transcripotmics.RData")
 
