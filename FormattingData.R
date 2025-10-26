@@ -171,7 +171,8 @@ ggplot(tg.counts, aes(x=Sex, y=tpm, color=Age, shape = Genotype)) +
 # Now, we have formatted the count and metadata for downstream analyses. We will save the data
 metadata <- as.data.frame(meta)
 rownames(metadata) <- metadata$Names
-#save(metadata,rawcountdata,mydat_TPM,file="data/ProcessedData_Brain_Transcriptomics.RData")
+
+save(metadata,rawcountdata,mydat_TPM,file="data/ProcessedData_Brain_Transcriptomics.RData")
 
 
 
