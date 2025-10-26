@@ -1,12 +1,3 @@
-# Aligning Human and Mouse Phenotypes
-#let's switch gears and think about the human datasets. The Accelerating
-#Medicines Partnership-Alzheimer’s Disease Consortium
-#([AMP-AD](https://adknowledgeportal.synapse.org/Explore/Programs/DetailsPage?Program=AMP-AD))
-#has generated extensive sets of 'omics data from a variety of human Alzheimer's
-#Disease cohorts. AMP-AD researchers are applying systems biology approaches
-#toward the goal of elucidating AD mechanisms and highlighting potential
-#therapeutic targets.
-
 ### Overview of Human Consensus RNA-Seq Coexpression Modules
 
 #[Wan, et al.](https://doi.org/10.1016/j.celrep.2020.107908) performed multi
@@ -16,9 +7,6 @@
 #described by Wan, et al. These consensus clusters consist of a subset of
 #modules which are associated with similar AD related changes across the
 #multiple studies and brain regions.
-
-
-### Accessing AMP-AD module data
 
 #These AMP-AD co-expression modules are very useful for making comparisons
 #between animal models and the human cohorts. In order to use these modules to
@@ -36,27 +24,19 @@ ggplot(module_table,aes(y=Module)) +
   theme_bw() 
 
 #### Mouse orthologs of Human module genes  
-
 #In the module table we've downloaded we have human ENSEMBL ids and human gene
 #symbols. In order to compare between human and mouse models, we will need to
 #identify the corresponding (i.e. orthologous) mouse gene IDs. We are going to
 #add the gene IDs of orthologous genes in mouse to the corresponding human genes
-#in the module table.
-
-#Orthology mapping can be tricky, but  Wan *et al* have already
-#identified mouse orthologs for each of the human genes using the HGNC
+#in the module table.Orthology mapping can be tricky, but  Wan *et al* have
+#already identified mouse orthologs for each of the human genes using the HGNC
 #Comparison of Orthology Predictions
-#([HCOP](https://www.genenames.org/tools/hcop/)) tool. While there are a variety
-#of different ways to get data about gene orthology, for the sake of simplicity
-#we are going to read that table from Synapse
-#([syn17010253](https://doi.org/10.7303/syn17010253.1)).
+#([HCOP](https://www.genenames.org/tools/hcop/)) tool.
+
+#we are going to read that table from Synapse ([syn17010253](https://doi.org/10.7303/syn17010253.1)).
 
 #mouse.human.ortho <- syn$get("syn17010253")$path %>% read_tsv()
 mouse.human.ortho <- read_tsv("human_mouse_hcop_fifteen_column_20160523.txt")
-
-#We'll add mouse gene symbols from the ortholog table to the module table by
-#matching the human ENSEMBL IDs from both tables (i.e. `GeneID` from the module
-#table and `human_ensembl_gene` from the orthology table).
 
 module_table$Mouse_gene_symbol <-
   mouse.human.ortho$mouse_symbol[
@@ -154,13 +134,13 @@ save(ampad_modules_fc,module_clusters,mod, file= here::here("results","AMPAD_Mod
   
 #  1. Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
 #  + LogFC(h) = log fold change in expression of human AD patients compared to control patients. 
-#+ LogFC(m) = log fold change in expression of mouse AD models compared to control mouse models.
+#  + LogFC(m) = log fold change in expression of mouse AD models compared to control mouse models.
 
 cor.test(LogFC(h), LogFC(m))
   
 #  2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  
 #  + h = human gene expression (Log2 RNA-seq Fold Change AD/control)
-#+ β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
+#. + β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
 
 cor.test(LogFC(h), β)
   
@@ -170,13 +150,9 @@ cor.test(LogFC(h), β)
 #Read the results saved after differential expression analysis
 load("data/DESeq_Results_Transcripotmics.RData")
 
-#order.model <- c("B6J.LOAD3-B6(Female-4M)" ,  "B6J.LOAD3-B6(Male-4M)" , "B6J.LOAD3-B6(Female-12M)","B6J.LOAD3-B6(Male-12M)")
-corrplot_data <- corr_function(DE_Genotype.df,ampad_modules_fc)
-range(corrplot_data$correlation)
-
-# we'll combine both mouse `fad.deg` and human `ampad_modules_fc` log fold
-# change data sets for all genes and compute correlation coefficients using the
-# `cor.test` function
+# we'll combine both mouse and human `ampad_modules_fc` log fold change data
+# sets for all genes and compute correlation coefficients using the `cor.test`
+# function
 mouse_vs_ampad_fc <- DE_Genotype.df %>%
   inner_join(ampad_modules_fc,
              by = c('symbol'),
@@ -195,8 +171,10 @@ mouse_vs_ampad_fc <- DE_Genotype.df %>%
   dplyr::select(-cor_test)
 
 #### Step 2: Annotate correlation table to prepare for visualization
-
-#These steps will make it easier to make a nice looking plot during the next step. We'll add a column that flags whether the correlation is significant or not, and we'll add in the information about which consensus cluster each module belongs to:
+#These steps will make it easier to make a nice looking plot during the next
+#step. We'll add a column that flags whether the correlation is significant or
+#not, and we'll add in the information about which consensus cluster each module
+#belongs to:
   
 mouse_vs_ampad <- mouse_vs_ampad_fc %>%
   mutate(significant = p_value < 0.05) %>%
@@ -205,7 +183,8 @@ mouse_vs_ampad <- mouse_vs_ampad_fc %>%
                 correlation = estimate,p_value,significant)
 
 #### Step 3: Create a dataframe to use as input for plotting the results
-#More preparations for plotting, here we'll get all of the values in the right order so that they are grouped together nicely on the plot.
+#More preparations for plotting, here we'll get all of the values in the right
+#order so that they are grouped together nicely on the plot.
 
 data_for_plot <- mouse_vs_ampad %>%
   arrange(cluster) %>%
@@ -274,8 +253,8 @@ ggdraw(g)
 #In the above plot, categories along the x-axis are the 30 AMP-AD co-expression
 #modules grouped into 5 consensus clusters, while the categories along the
 #y-axis show the different groupings of mouse models tested (split by age).
-#Positive correlations are shown in blue and negative correlations in red. Color
-#intensity and size of the circles are proportional to the correlation
+#Positive correlations are shown in blue and negative correlations in red. 
+#Color intensity and size of the circles are proportional to the correlation
 #coefficient.  Black squares around dots represent significant correlation at
 #p-value=0.05 and non-significant correlations are left blank.
 
