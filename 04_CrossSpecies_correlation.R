@@ -1,19 +1,18 @@
 ### Overview of Human Consensus RNA-Seq Coexpression Modules
-
 #[Wan, et al.](https://doi.org/10.1016/j.celrep.2020.107908) performed multi
 #method co-expression network analysis  followed by differential analysis and
 #found 30 co-expression modules related LOAD pathology from human cohort study.
 #Among the 30 aggregate co-expression modules, five consensus clusters have been
 #described by Wan, et al. These consensus clusters consist of a subset of
 #modules which are associated with similar AD related changes across the
-#multiple studies and brain regions.
+#multiple studies and brain regions.These AMP-AD co-expression modules are very
+#useful for making comparisons between animal models and the human cohorts.
 
-#These AMP-AD co-expression modules are very useful for making comparisons
-#between animal models and the human cohorts. In order to use these modules to
-#make the comparisons, we'll need to download data pertaining to the 30
-#co-expression modules. These data are available from the Synapse data
-#repository ([syn11932957](https://www.synapse.org/Synapse:syn11932957)); let's
-#download and take a closer look at the data.
+#In order to use these modules to make the comparisons, we'll need to download
+#data pertaining to the 30 co-expression modules. These data are available from
+#the Synapse data repository
+#([syn11932957](https://www.synapse.org/Synapse:syn11932957)); let's download
+#and take a closer look at the data.
 
 query <- syn$tableQuery("SELECT * FROM syn11932957")
 module_table <- read_csv(query$filepath)
@@ -23,20 +22,20 @@ ggplot(module_table,aes(y=Module)) +
   geom_bar() + 
   theme_bw() 
 
-#### Mouse orthologs of Human module genes  
+### Mouse orthologs of Human module genes  
 #In the module table we've downloaded we have human ENSEMBL ids and human gene
-#symbols. In order to compare between human and mouse models, we will need to
+#symbols. In order to compare between human and mouse models, we need to
 #identify the corresponding (i.e. orthologous) mouse gene IDs. We are going to
 #add the gene IDs of orthologous genes in mouse to the corresponding human genes
-#in the module table.Orthology mapping can be tricky, but  Wan *et al* have
+#in the module table. Orthology mapping can be tricky, but  Wan *et al* have
 #already identified mouse orthologs for each of the human genes using the HGNC
 #Comparison of Orthology Predictions
 #([HCOP](https://www.genenames.org/tools/hcop/)) tool.
 
-#we are going to read that table from Synapse ([syn17010253](https://doi.org/10.7303/syn17010253.1)).
+#We are going to read that table from Synapse ([syn17010253](https://doi.org/10.7303/syn17010253.1)).
 
-#mouse.human.ortho <- syn$get("syn17010253")$path %>% read_tsv()
-mouse.human.ortho <- read_tsv("human_mouse_hcop_fifteen_column_20160523.txt")
+mouse.human.ortho <- syn$get("syn17010253")$path %>% read_tsv()
+#mouse.human.ortho <- read_tsv("human_mouse_hcop_fifteen_column_20160523.txt")
 
 module_table$Mouse_gene_symbol <-
   mouse.human.ortho$mouse_symbol[
@@ -129,29 +128,23 @@ mod <- module_clusters$module
 
 save(ampad_modules_fc,module_clusters,mod, file= here::here("results","AMPAD_Module_Data.RData"))
 
-## There are two approaches that we commonly use to compute correlation between mouse data and human AD data:   
+#There are two approaches that we commonly use to compute correlation between
+#mouse data and human AD data. Both approaches allow us to assess directional
+#coherence between gene expression for genes in AMP-AD modules and the effects
+#of genetic manipulations in mice. For this session we are going to use the
+#first approach; we'll return to approach #2 later in the week.
+
 # [1] Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
 #  + LogFC(h) = log fold change in expression of human AD patients compared to control patients. 
 #  + LogFC(m) = log fold change in expression of mouse AD models compared to control mouse models.
 
 cor.test(LogFC(h), LogFC(m))
   
-#  2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  
-#  + h = human gene expression (Log2 RNA-seq Fold Change AD/control)
-#. + β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
-
-cor.test(LogFC(h), β)
-  
-#Both approaches allow us to assess directional coherence between gene expression for genes in AMP-AD modules and the effects of genetic manipulations in mice. For this session we are going to use the first approach; we'll return to approach #2 later in the week.   
-
-# [1] Compare change in expression in Human AD cases vs controls with change in expression in mouse models for each gene in a given module:  
-
 #Read the results saved after differential expression analysis
 load("data/DESeq_Results_Transcripotmics.RData")
 
 # we'll combine both mouse and human `ampad_modules_fc` log fold change data
-# sets for all genes and compute correlation coefficients using the `cor.test`
-# function
+# sets for all genes and compute correlation coefficients using the `cor.test` function
 mouse_vs_ampad_fc <- DE_Genotype.df %>%
   inner_join(ampad_modules_fc,
              by = c('symbol'),
@@ -169,9 +162,8 @@ mouse_vs_ampad_fc <- DE_Genotype.df %>%
   ungroup() %>%
   dplyr::select(-cor_test)
 
-#### Step 2: Annotate correlation table to prepare for visualization
-#These steps will make it easier to make a nice looking plot during the next
-#step. We'll add a column that flags whether the correlation is significant or
+#### Annotate correlation table to prepare for visualization
+#We'll add a column that flags whether the correlation is significant or
 #not, and we'll add in the information about which consensus cluster each module
 #belongs to:
   
@@ -181,9 +173,7 @@ mouse_vs_ampad <- mouse_vs_ampad_fc %>%
   dplyr::select(cluster,cluster_label,module,group,
                 correlation = estimate,p_value,significant)
 
-#### Step 3: Create a dataframe to use as input for plotting the results
-#More preparations for plotting, here we'll get all of the values in the right
-#order so that they are grouped together nicely on the plot.
+#### Create a data frame to use as input for plotting the results
 
 data_for_plot <- mouse_vs_ampad %>%
   arrange(cluster) %>%
@@ -258,8 +248,16 @@ ggdraw(g)
 #p-value=0.05 and non-significant correlations are left blank.
 
 #  2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  
-mydat <- as.data.frame(mydat_TPM) %>% mutate(Gene=mapIds(org.Mm.eg.db,keys = rownames(.),column = "SYMBOL",keytype = "ENSEMBL",multiVals = "first"),.before =1) %>%
-  pivot_longer(cols=-Gene,names_to="Names",values_to="value") %>% na.omit(.) %>%
+#  + h = human gene expression (Log2 RNA-seq Fold Change AD/control)
+#. + β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
+
+cor.test(LogFC(h), β)
+
+# Here, we are using log normalized TPM count data to assess the effect size of each factors
+mydat <- as.data.frame(mydat_TPM) %>% 
+  mutate(Gene=mapIds(org.Mm.eg.db,keys = rownames(.),column = "SYMBOL",keytype = "ENSEMBL",multiVals = "first"),.before =1) %>%
+  pivot_longer(cols=-Gene,names_to="Names",values_to="value") %>% 
+  na.omit(.) %>%
   mutate(Names = as.integer(Names))
 
 mydat_with_metadata <- mydat %>% left_join(metadata,by="Names") %>% 
@@ -268,59 +266,61 @@ mydat_with_metadata <- mydat %>% left_join(metadata,by="Names") %>%
   mutate(FAD = ifelse(Genotype %in% c("5XFAD"),1,0))  %>%
   mutate(Age=factor(Age, levels = c(4,6,12)))
 
-
+# run the multiple linear regression model
 lms.case <- mydat_with_metadata %>% split(.$Gene) %>% map(~lm(value ~ Sex + Age + FAD, data=.x)) %>% map(summary) 
 
-effects <- as.data.frame(bind_rows( lapply(lms.case, function(x) x$coefficients[,"Estimate"] ))) %>% mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names")
-pvals <- as.data.frame(bind_rows( lapply( lms.case, function(x) x$coefficients[,"Pr(>|t|)"] ))) %>% mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names")
-colnames(pvals) <- colnames(effects) <- c("(Intercept)", "Sex (Male)","Age_6M","Age_12M","5XFAD")
+# extract the effect size and corresponding p-values
+effects <- as.data.frame(bind_rows( lapply(lms.case, function(x) x$coefficients[,"Estimate"] ))) %>% 
+  mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names") %>% 
+  tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% 
+  pivot_longer(cols=-Gene,names_to="Variant",values_to="effect_size") %>%
+  mutate(Variant = case_when(
+    Variant == "SexM" ~ "Sex (Male)",
+    Variant == "Age6" ~ "Age_6M",
+    Variant == "Age12" ~ "Age_12M",
+    Variant == "FAD" ~ "5XFAD"
+  ))
 
-rna_effects <- effects %>% tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% pivot_longer(cols=-Gene,names_to="Variant",values_to="value")
-rna_pvals <- pvals %>% tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% pivot_longer(cols=-Gene,names_to="Variant",values_to="pval")
-effects_pvals <- rna_effects %>% left_join(rna_pvals,by=c("Gene","Variant")) %>% mutate(padj = p.adjust(pval,method = "fdr"))
+pvals <- as.data.frame(bind_rows( lapply(lms.case, function(x) x$coefficients[,"Pr(>|t|)"] ))) %>% 
+  mutate(names = names(lms.case)) %>% column_to_rownames(.,var="names") %>% 
+  tibble::rownames_to_column(.,"Gene") %>% dplyr::select(-"(Intercept)") %>% 
+  pivot_longer(cols=-Gene,names_to="Variant",values_to="pval") %>%
+  mutate(Variant = case_when(
+    Variant == "SexM" ~ "Sex (Male)",
+    Variant == "Age6" ~ "Age_6M",
+    Variant == "Age12" ~ "Age_12M",
+    Variant == "FAD" ~ "5XFAD"
+  ))
 
+# join effect size and p-value for each factor for each gene in a single daat frame.
+effects_pvals <- effects %>% left_join(pvals,by=c("Gene","Variant")) %>% mutate(padj = p.adjust(pval,method = "fdr"))
 
-ordered.variant <- c("Sex (Male)","Age_6M","Age_12M","5XFAD")
-data_for_plot <- corr_function_lm(rna_effects,ampad_modules_fc %>% rename("Gene"="symbol")) %>% 
-  mutate(Background = ifelse(Variant %in% c("Sex (Male)"),"Female",ifelse(Variant %in% c("5XFAD"),"B6","Age_4M"))) %>%
-  mutate(Background=factor(Background,levels = c("Female","Age_4M","B6")))
-range(data_for_plot$correlation)
-
-variant_corrplot_colored(data_for_plot,0.4)
-
-corr_function_lm <- function(data,human_data)
+# Created a function to perform correlation analysis and generate data frame for plotting like previous section.
+corr_function_lm <- function(data, human_data)
 {
-  ns_vs_ampad_fc <- data  %>%
+  mouse_vs_ampad <- data  %>%
     inner_join(human_data, by = c("Gene")) %>%
     group_by(module, Variant) %>%
-    nest(data = c(Gene, value, ampad_fc)) %>%
+    nest(data = c(Gene, effect_size, ampad_fc)) %>%
     mutate(
-      cor_test = map(data, ~ cor.test(.x[["value"]], .x[["ampad_fc"]], method = "pearson")),
+      cor_test = map(data, ~ cor.test(.x[["effect_size"]], .x[["ampad_fc"]], method = "pearson")),
       estimate = map_dbl(cor_test, "estimate"),
       p_value = map_dbl(cor_test, "p.value")
     ) %>%
     ungroup() %>%
     dplyr::select(-cor_test)
   
-  
-  # Process data for plotting ----
   # Flag for significant results, add cluster information to modules
-  nanostring <- ns_vs_ampad_fc %>%
-    mutate(significant = p_value < 0.05, age_group = "All Months") %>%
+  mouse_vs_ampad <- mouse_vs_ampad %>%
+    mutate(significant = p_value < 0.05) %>%
     left_join(module_clusters, by = "module") %>%
     dplyr::select(
-      cluster,
-      cluster_label,
-      module,
-      Variant,
-      age_group,
-      correlation = estimate,
-      p_value,
-      significant
+      cluster, cluster_label, module,Variant,
+      correlation = estimate, p_value,significant
     )
   
   # Create a version of the data for plotting - clean up naming, order factors, etc
-  nanostring_for_plot.all <- nanostring %>%
+  data_for_plot.all <- mouse_vs_ampad %>%
     arrange(cluster) %>%
     mutate(
       Variant = factor(Variant, levels = ordered.variant),
@@ -329,42 +329,38 @@ corr_function_lm <- function(data,human_data)
     )
 }
 
+ordered.variant <- c("Sex (Male)","Age_6M","Age_12M","5XFAD")
+data_for_plot <- corr_function_lm(effects,ampad_modules_fc %>% rename("Gene"="symbol")) %>% 
+  mutate(Background = ifelse(Variant %in% c("Sex (Male)"),"Female",ifelse(Variant %in% c("5XFAD"),"B6","Age_4M"))) %>%
+  mutate(Background=factor(Background,levels = c("Female","Age_4M","B6")))
+range(data_for_plot$correlation)
+
+
+### Visualizing the Correlation plot
+range(data_for_plot$correlation)
+
+# Function to create correlation plot
 variant_corrplot_colored <- function(data, ran) {
-  p2 <- ggplot2::ggplot() +
+  p <- ggplot2::ggplot() +
     ggplot2::geom_tile(
-      data = data,
+      data = data, 
       ggplot2::aes(x = .data$module, y = .data$Variant),
-      colour = "black",
-      fill = "white"
+      colour = "black", fill = "white"
     ) +
     ggplot2::geom_point(
       data = dplyr::filter(data),
       ggplot2::aes(
-        x = .data$module,
-        y = .data$Variant,
-        colour = .data$correlation,
-        size = abs(.data$correlation)
+        x = .data$module, y = .data$Variant,colour = .data$correlation,size = abs(.data$correlation)
       )
     ) +
     ggplot2::geom_point(
       data = dplyr::filter(data, .data$significant),
-      aes(
-        x = .data$module,
-        y = .data$Variant,
-        colour = .data$correlation
-      ),
-      color = "black",
-      shape = 0,
-      size = 9
-    ) +
+      aes( x = .data$module, y = .data$Variant,colour = .data$correlation),
+      color = "black",shape = 0,size = 9) +
     ggplot2::scale_x_discrete(position = "top") +
     ggplot2::scale_size(guide = "none", limits = c(0, ran)) +
     ggplot2::scale_color_gradient2(
-      limits = c(-ran, ran),
-      breaks = c(-ran, 0, ran),
-      low = "#85070C",
-      high = "#164B6E",
-      name = "Correlation",
+      limits = c(-ran, ran), breaks = c(-ran, 0, ran), low = "#85070C",high = "#164B6E",name = "Correlation",
       guide = ggplot2::guide_colorbar(ticks = FALSE)
     ) +
     ggplot2::labs(x = NULL, y = NULL) +
@@ -372,9 +368,7 @@ variant_corrplot_colored <- function(data, ran) {
     ggplot2::facet_grid(
       rows = dplyr::vars(.data$Background),
       cols = dplyr::vars(.data$cluster_label),
-      scales = "free",
-      space = "free",
-      switch = "y"
+      scales = "free", space = "free", switch = "y"
     ) +
     ggplot2::theme(
       strip.text.x = ggplot2::element_text(size = 11),
@@ -382,18 +376,11 @@ variant_corrplot_colored <- function(data, ran) {
       strip.background.y = ggplot2::element_rect(fill = "grey95"),
       axis.ticks = ggplot2::element_blank(),
       axis.text.x = ggplot2::element_text(
-        angle = 90,
-        hjust = 0,
-        size = 12
+        angle = 90, hjust = 0,size = 12
       ),
       axis.text.y = ggplot2::element_text(size = 12),
       plot.title = ggplot2::element_text(
-        angle = 0,
-        vjust = -56,
-        hjust = 0.01,
-        size = 11,
-        face = "bold"
-      ),
+        angle = 0, vjust = -56, hjust = 0.01,size = 11,face = "bold"),
       panel.background = ggplot2::element_blank(),
       plot.title.position = "plot",
       panel.grid = ggplot2::element_blank(),
@@ -401,7 +388,7 @@ variant_corrplot_colored <- function(data, ran) {
     ) + theme(legend.title = element_text(size=13),legend.text = element_text(size=12))
   
   fills <- c("darkorange3","chartreuse3","deepskyblue2","turquoise","deeppink2")
-  g <- ggplot_gtable(ggplot_build(p2))
+  g <- ggplot_gtable(ggplot_build(p))
   stripr <- which(grepl('strip-t', g$layout$name))
   k <- 1
   for (i in stripr) {
@@ -413,3 +400,5 @@ variant_corrplot_colored <- function(data, ran) {
   
 }
 
+
+variant_corrplot_colored(data_for_plot,0.4)

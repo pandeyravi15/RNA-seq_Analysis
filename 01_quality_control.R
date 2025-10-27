@@ -11,10 +11,17 @@
 #information about this generation and maintenance of this strain can be
 #obtained from the [JAX strain catalog](https://www.jax.org/strain/008730).
 
-# Reading metadata
+##############################################
+######## Quality Control - Data Prep #########
+##############################################
+
+rm(list = ls())
+gc()
+
+#Reading metadata
 meta <- read.csv("data/metadata_5XFAD_RNASeq_JAX.csv")
 
-# Reading the count data
+#Reading the count data
 gene_counts <- read_tsv("data/rnaseq_rsem.merged.gene_counts.tsv") %>% dplyr::select(-"transcript_id(s)") 
 gene_tpm <- read_tsv("data/rnaseq_rsem.merged.gene_tpm.tsv") %>% dplyr::select(-"transcript_id(s)") 
 
