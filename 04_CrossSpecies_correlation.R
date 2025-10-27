@@ -247,9 +247,12 @@ ggdraw(g)
 #coefficient.  Black squares around dots represent significant correlation at
 #p-value=0.05 and non-significant correlations are left blank.
 
-#  2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  
+#########################################################################################################
+### 2. Compare Human AD expression changes to mouse genetic effects for each gene in a given module:  ###
+#########################################################################################################
+
 #  + h = human gene expression (Log2 RNA-seq Fold Change AD/control)
-#. + β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
+#  + β = mouse gene expression effect from linear regression model (Log2 RNA-seq TPM)
 
 cor.test(LogFC(h), β)
 
@@ -293,7 +296,7 @@ pvals <- as.data.frame(bind_rows( lapply(lms.case, function(x) x$coefficients[,"
   ))
 
 # join effect size and p-value for each factor for each gene in a single daat frame.
-effects_pvals <- effects %>% left_join(pvals,by=c("Gene","Variant")) %>% mutate(padj = p.adjust(pval,method = "fdr"))
+effects_pvals <- effects %>% left_join(pvals,by=c("Gene","Variant")) %>% mutate(FDR = p.adjust(pval,method = "fdr"))
 
 # Created a function to perform correlation analysis and generate data frame for plotting like previous section.
 corr_function_lm <- function(data, human_data)
@@ -350,17 +353,29 @@ variant_corrplot_colored <- function(data, ran) {
     ggplot2::geom_point(
       data = dplyr::filter(data),
       ggplot2::aes(
-        x = .data$module, y = .data$Variant,colour = .data$correlation,size = abs(.data$correlation)
+        x = .data$module, 
+        y = .data$Variant,
+        colour = .data$correlation,
+        size = abs(.data$correlation)
       )
     ) +
     ggplot2::geom_point(
       data = dplyr::filter(data, .data$significant),
-      aes( x = .data$module, y = .data$Variant,colour = .data$correlation),
-      color = "black",shape = 0,size = 9) +
+      aes( 
+        x = .data$module, 
+        y = .data$Variant,
+        colour = .data$correlation),
+      color = "black",
+      shape = 0,
+      size = 9) +
     ggplot2::scale_x_discrete(position = "top") +
     ggplot2::scale_size(guide = "none", limits = c(0, ran)) +
     ggplot2::scale_color_gradient2(
-      limits = c(-ran, ran), breaks = c(-ran, 0, ran), low = "#85070C",high = "#164B6E",name = "Correlation",
+      limits = c(-ran, ran), 
+      breaks = c(-ran, 0, ran), 
+      low = "#85070C",
+      high = "#164B6E",
+      name = "Correlation",
       guide = ggplot2::guide_colorbar(ticks = FALSE)
     ) +
     ggplot2::labs(x = NULL, y = NULL) +
@@ -368,7 +383,9 @@ variant_corrplot_colored <- function(data, ran) {
     ggplot2::facet_grid(
       rows = dplyr::vars(.data$Background),
       cols = dplyr::vars(.data$cluster_label),
-      scales = "free", space = "free", switch = "y"
+      scales = "free", 
+      space = "free", 
+      switch = "y"
     ) +
     ggplot2::theme(
       strip.text.x = ggplot2::element_text(size = 11),
@@ -376,11 +393,17 @@ variant_corrplot_colored <- function(data, ran) {
       strip.background.y = ggplot2::element_rect(fill = "grey95"),
       axis.ticks = ggplot2::element_blank(),
       axis.text.x = ggplot2::element_text(
-        angle = 90, hjust = 0,size = 12
+        angle = 90, 
+        hjust = 0,
+        size = 12
       ),
       axis.text.y = ggplot2::element_text(size = 12),
       plot.title = ggplot2::element_text(
-        angle = 0, vjust = -56, hjust = 0.01,size = 11,face = "bold"),
+        angle = 0, 
+        vjust = -56, 
+        hjust = 0.01,
+        size = 11,
+        face = "bold"),
       panel.background = ggplot2::element_blank(),
       plot.title.position = "plot",
       panel.grid = ggplot2::element_blank(),
