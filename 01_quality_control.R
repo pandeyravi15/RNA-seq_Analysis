@@ -13,11 +13,11 @@ meta <- read.csv("data/metadata_5XFAD_RNASeq_JAX.csv")
 gene_counts <- read_tsv("data/rnaseq_rsem.merged.gene_counts.tsv") %>% dplyr::select(-"transcript_id(s)") 
 gene_tpm <- read_tsv("data/rnaseq_rsem.merged.gene_tpm.tsv") %>% dplyr::select(-"transcript_id(s)") 
 
-# Let’s check how many gene_ids are NOT from the mouse genome 
+#Let’s check how many gene_ids are NOT from the mouse genome 
 gene_counts[,1:3] %>% 
   filter(!str_detect(gene_id, "MUS"))
 
-#### Accounting for transgenes
+#### Accounting for transgenes ####
 tg.counts <- gene_counts %>%
   filter(gene_id %in% c("ENSG00000080815","ENSMUSG00000019969",
                         "ENSG00000142192","ENSMUSG00000022892")) %>% 
@@ -41,7 +41,7 @@ tg.counts <- tg.counts %>%
     )
   )
 
-#plot the counts for each gene across the samples:
+# plot the counts for each gene across the samples:
 ggplot(tg.counts, aes(x=Genotype, y=counts, color=Age, shape = Sex)) +
   geom_boxplot() + 
   #geom_point(position=position_jitterdodge())+
@@ -62,7 +62,7 @@ counts <- gene_counts %>% column_to_rownames("gene_id")
 counts[rownames(counts) %in% "ENSMUSG00000022892",] <-  
   counts[rownames(counts) %in% "ENSMUSG00000022892",] + counts[rownames(counts) %in% "ENSG00000142192",]
 
-#merge mouse and human PS1 gene raw count
+# merge mouse and human PS1 gene raw count
 counts[rownames(counts) %in% "ENSMUSG00000019969",] <- 
   counts[rownames(counts) %in% "ENSMUSG00000019969",] + counts[rownames(counts) %in% "ENSG00000080815",]
 
@@ -71,13 +71,11 @@ counts <- counts[!rownames(counts) %in% c("ENSG00000080815","ENSG00000142192"),]
 # We can confirm that the human genes are now absent from the counts table:
 counts[,1:6] %>% filter(!str_detect(rownames(.), "MUS"))
 
-
 # convert counts to integer format for DESeq analysis
 df_int <- counts %>% mutate(across(everything(), as.integer))
 rawcountdata <- df_int[,colnames(df_int) %in% meta$Names]
 
-
-###### Let's account for transgenes for gene tpm count data as well
+###### Let's account for transgenes for gene tpm count data as well ####
 tg.counts <- gene_tpm %>%
   filter(gene_id %in% c("ENSG00000080815","ENSMUSG00000019969",
                         "ENSG00000142192","ENSMUSG00000022892")) %>% 
@@ -99,29 +97,22 @@ tg.counts <- tg.counts %>%
     )
   )
 
-#plot the counts for each gene across the samples:
+# plot the counts for each gene across the samples:
 ggplot(tg.counts, aes(x=Genotype, y=tpm, color=Sex, shape = Age)) +
   geom_boxplot() + 
   geom_point(position=position_jitterdodge())+
   facet_wrap(~symbol, scales = 'free')+
   theme_bw()
 
-#The human transgenes all have a counts of zero in the B6 animals (where the
-#transgenes are absent), while the endogenous mouse genes are expressed
-#relatively consistently across both groups. Let's combine the expression of
-#corresponding human and mouse genes by summing the expression and saving the
-#summed expression as expression of mouse genes, respectively to match with gene
-#names in control mice.
-
 # move the gene_id column to rownames, to enable summing across rows
 tpm <- gene_tpm %>% column_to_rownames("gene_id") 
 
-#merge mouse and human APOE gene raw count
+# merge mouse and human APOE gene raw count
 tpm[rownames(tpm) %in% "ENSMUSG00000022892",] <- 
   tpm[rownames(tpm) %in% "ENSMUSG00000022892",] + 
   tpm[rownames(tpm) %in% "ENSG00000142192",]
 
-#merge mouse and human PS1 gene raw count
+# merge mouse and human PS1 gene raw count
 tpm[rownames(tpm) %in% "ENSMUSG00000019969",] <- 
   tpm[rownames(tpm) %in% "ENSMUSG00000019969",] + 
   tpm[rownames(tpm) %in% "ENSG00000080815",]
@@ -133,7 +124,7 @@ tpm <- tpm[!rownames(tpm) %in% c("ENSG00000080815","ENSG00000142192"),]
 tpm[,1:6] %>% filter(!str_detect(rownames(.), "MUS"))
 # should output NULL
 
-#Here we perform a minimal pre-filtering to keep only rows that have at least 0.1  in gene_tpm count data in at least 5 separate samples.
+# Here we perform a minimal pre-filtering to keep only rows that have at least 0.1  in gene_tpm count data in at least 5 separate samples.
 TPMcount.filter <- tpm[rowSums((tpm > 0.1))>5, ]
 rawdata1 <- TPMcount.filter[,colnames(TPMcount.filter) %in% meta$Names]
 mydat_TPM <- as.data.frame(log2(rawdata1 + 1))
