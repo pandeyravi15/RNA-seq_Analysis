@@ -1,15 +1,3 @@
-###Let's analyze the 5xFAD RNA-seq expression data. Specifically, we want to
-#know which genes are differentially expressed at each age as a result of the
-#transgenes that constitute the 5xFAD model.The 5xFAD mouse model is a 5x
-#transgenic model consisting of mutatnt human transgenes of the amyloid
-#precursor protein (APP) and presenilin 1 (PSEN1) genes. The specific variants
-#are all causal variants for Familial Alzheimer's Disease (FAD) and include
-#three variants in the APP gene - Swedish (K670N, M671L), Florida (I716V), and
-#London (V717I) - and two in the PSEN1 gene - M146L and L286V. The expression of
-#both transgenes is under control of the neural-specific elements of the mouse
-#Thy1 promoter, which drives overexpression of the transgenes in the brain. More
-#information about this generation and maintenance of this strain can be
-#obtained from the [JAX strain catalog](https://www.jax.org/strain/008730).
 
 ##############################################
 ######## Quality Control - Data Prep #########
