@@ -11,7 +11,6 @@ meta <- read.csv("data/metadata_5XFAD_RNASeq_JAX.csv")
 
 #Reading the count data
 gene_counts <- read_tsv("data/rnaseq_rsem.merged.gene_counts.tsv") %>% dplyr::select(-"transcript_id(s)") 
-gene_tpm <- read_tsv("data/rnaseq_rsem.merged.gene_tpm.tsv") %>% dplyr::select(-"transcript_id(s)") 
 
 #Let’s check how many gene_ids are NOT from the mouse genome 
 gene_counts[,1:3] %>% 
@@ -76,6 +75,8 @@ df_int <- counts %>% mutate(across(everything(), as.integer))
 rawcountdata <- df_int[,colnames(df_int) %in% meta$Names]
 
 ###### Let's account for transgenes for gene tpm count data as well ####
+gene_tpm <- read_tsv("data/rnaseq_rsem.merged.gene_tpm.tsv") %>% dplyr::select(-"transcript_id(s)") 
+
 tg.counts <- gene_tpm %>%
   filter(gene_id %in% c("ENSG00000080815","ENSMUSG00000019969",
                         "ENSG00000142192","ENSMUSG00000022892")) %>% 

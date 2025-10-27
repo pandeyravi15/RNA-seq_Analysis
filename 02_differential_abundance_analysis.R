@@ -1,6 +1,16 @@
+#############################
+### Differential Analysis ###
+#############################
 
-# To assess the differentially expressed transcripts. We'll use the `DESeq2` package to perform differential expression analysis of the RNA-seq data.
-# custom function for DESeq analysis
+## functions required for extracting gene symbol and ENTREZID
+map_function.df <- function(x, inputtype, outputtype) {
+  mapIds(
+    org.Mm.eg.db, keys = row.names(x),column = outputtype,keytype = inputtype,multiVals = "first"
+  )
+}
+
+# Differential expression in mouse models was assessed using the Bioconductor package DESeq2.
+# Custom function for DESeq analysis
 DEG.SampleType <- function(rawdata,meta) {
   dseq_res <- data.frame()
   All_res <- data.frame()
@@ -28,8 +38,8 @@ DEG.SampleType <- function(rawdata,meta) {
   
 }
 
-# LOAD clean and formatted RNA-seq count data from previous step
-load("data/ProcessedData_Brain_Transcriptomics.RData")
+# Load clean and formatted RNA-seq count data generated in quality control script
+lname = load("data/ProcessedData_Brain_Transcriptomics.RData")
 
 # add group column to metadata
 metadata <- metadata %>% 
@@ -71,17 +81,28 @@ deg1 %>% gt() %>%
   ) %>% tab_options(table.width = pct(80)) %>%
   tab_header(title = md("total number of differentially expressed genes at `adjP<0.05`"))
 
+#####################
+### Visualization ###
+#####################
 
 ## Volcano Plots for differentially expressed genes
+
 for (i in 1:length(DE_Genotype.list))
 {
   dat <- DE_Genotype.list[[i]]
   
   print(
     EnhancedVolcano(dat,
-                    lab = (dat$symbol),x = 'log2FoldChange', y = 'padj',legendPosition = 'none',
-                    title = names(DE_Genotype.list)[i],subtitle = '',
-                    FCcutoff = 0.0,pCutoff = 0.05,xlim = c(-5, 5))
+                    lab = (dat$symbol),
+                    x = 'log2FoldChange', 
+                    y = 'padj',
+                    legendPosition = 'none',
+                    title = names(DE_Genotype.list)[i],
+                    subtitle = '',
+                    FCcutoff = 0.0,
+                    pCutoff = 0.05,
+                    xlim = c(-5, 5)
+    )
   )
 }
 

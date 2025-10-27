@@ -1,16 +1,15 @@
-### KEGG Pathways Enrichment
-#Over-representation (or enrichment) analysis is a statistical method that
-#determines whether genes from pre-defined sets (ex: those belonging to a
-#specific GO term or KEGG pathway) are present more than would be expected
-#(over-represented) in a subset of your data. In this case, the subset is\ set
-#of significantly under or over expressed genes identified in DESeq2 analysis.We
-#look for enrichment of biological pathways in a list of differentially
-#expressed genes. Here we test for enrichment of KEGG pathways using using
-#enrichKEGG function in
+################################
+### KEGG Pathways Enrichment ###
+################################
+
+#Here we test for enrichment of KEGG pathways using using enrichKEGG function in
 ##[clusterProfiler](https://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html)
 #package and plotted enriched terms.
 
-# LOAD the results from DESeq analysis
+# load function script
+source("Functions.R")
+
+# load the results from DESeq analysis
 lnames  = load("data/DESeq_Results_Transcripotmics.RData")
 
 # sub-setting significantly differentially expressed genes
@@ -77,7 +76,65 @@ print(
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("")
 )
 
-## Gene Set Enrichment Analysis
+####################################
+### GO-terms enrichment ###
+####################################
+
+# create background set
+background.set <- as.data.frame(org.Mm.egGO) %>% 
+  pull(gene_id) %>% 
+  unique() %>% 
+  bitr(., fromType = "ENTREZID", toType = 'SYMBOL', OrgDb = org.Mm.eg.db, drop = T) %>% 
+  pull('SYMBOL') %>% 
+  intersect(., DE_Genotype.df$symbol)
+
+#Now let's test for enriched GO terms (this can take 3-4 minutes)
+GO_enr.up <- enrichGO(gene.list.up, 
+                   ont = 'all', 
+                   OrgDb = org.Mm.eg.db, 
+                   keyType = 'SYMBOL',
+                   pvalueCutoff = 0.05,
+                   pAdjustMethod = "BH",
+                   universe = background.set,
+                   readable = TRUE
+)
+
+GO_enr.dn <- enrichGO(gene.list.dn, 
+                   ont = 'all', 
+                   OrgDb = org.Mm.eg.db, 
+                   keyType = 'SYMBOL',
+                   pvalueCutoff = 0.05,
+                   pAdjustMethod = "BH",
+                   universe = background.set,
+                   readable = TRUE
+)
+
+## plot top enriched KEGG pathways
+print(
+  clusterProfiler::dotplot(
+    GO_enr.up,
+    showCategory = 10,
+    font.size = 12,
+    label_format = 60
+  ) + 
+    ggtitle("KEGG Enrichment in upregulated genes") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("")
+)
+
+print(
+  clusterProfiler::dotplot(
+    GO_enr.dn,
+    showCategory = 10,
+    font.size = 12,
+    label_format = 60
+  ) + 
+    ggtitle("KEGG Enrichment in downregulated genes") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("")
+)
+
+####################################
+### Gene Set Enrichment Analysis ###
+####################################
 
 #Gene Set Enrichment Analysis (GSEA) is a computational method that determines
 #whether a pre-defined set of genes (ex: those belonging to a specific GO term or
@@ -167,24 +224,3 @@ Heatmap(
   }
 )
 
-## GO-terms enrichment
-univ <- as.data.frame(org.Mm.egGO) %>% 
-  pull(gene_id) %>% 
-  unique() %>% 
-  bitr(., fromType = "ENTREZID", toType = 'SYMBOL', OrgDb = org.Mm.eg.db, drop = T) %>% 
-  pull('SYMBOL') %>% 
-  intersect(., DE_Genotype.df$symbol)
-
-#Now let's test for enriched GO terms (this can take 3-4 minutes)
-enr.up <- enrichGO(gene.list.up, 
-                   ont = 'all', 
-                   OrgDb = org.Mm.eg.db, 
-                   keyType = 'SYMBOL',
-                   universe = univ
-                   )
-enr.dn <- enrichGO(gene.list.dn, 
-                   ont = 'all', 
-                   OrgDb = org.Mm.eg.db, 
-                   keyType = 'SYMBOL',
-                   universe = univ
-                   )
